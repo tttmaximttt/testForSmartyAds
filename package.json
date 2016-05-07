@@ -10,6 +10,8 @@
     "forever-stop": "./node_modules/.bin/forever stop ./build/server.js",
     "status": "./node_modules/.bin/forever list",
     "babel-node": "babel-node --presets=es2015 --ignore='node_modules'",
+    "preserver": "npm run build",
+    "server": "NODE_ENV=development node ./build/server.js",
     "build": "babel . -d build --ignore node_modules,build"
   },
   "dependencies": {
