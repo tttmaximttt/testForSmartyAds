@@ -15,7 +15,7 @@ const writeToFile = (filePath, body) => {
 		});
 
 		writeStream.on('error', (err) => {
-			reject()
+			reject(err)
 		});
 
 	} );
