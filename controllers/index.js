@@ -3,8 +3,8 @@
 const Promise = require('bluebird'),
 	fs = require('fs'),
 	path = require('path'),
+	{writeToFile,sendFile} = require('../services/helper'),
 	stat = Promise.promisify(fs.stat);
-
 
 
 const indexController = (app) => {
@@ -14,72 +14,28 @@ const indexController = (app) => {
 		base: 'hello.txt'
 	});
 
-	const writeToFile = (body) => {
-
-		return new Promise( (resolve, reject) => {
-
-			let writeStream = fs.createWriteStream(filePath);
-
-			writeStream.write(body);
-			writeStream.end();
-
-			writeStream.on('close', () => {
-				resolve()
-			});
-
-			writeStream.on('error', (err) => {
-				reject()
-			});
-
-		} );
-
-	};
-
 	const fileHandling = (req, res, next) => {
 		let dir = path.dirname(filePath);
 
 		return stat(dir)
 			.then( () => {
 
-				return writeToFile(req.body)
+				return writeToFile(filePath, req.body)
 
 			}, () => {
 
 				fs.mkdirSync(dir);
-				return writeToFile(req.body)
+				return writeToFile(filePath, req.body)
 
 			} )
 			.then( () =>{
-				return sendFile(res, next)
+				return sendFile(filePath, res, next)
 			}, (err) => {
 				app.logger.error(err);
 				return next(new restError.InternalServerError( err.message ));
 			} )
 	};
 
-	const sendFile = (res, next) => {
-
-		return new Promise( (resolve, reject) => {
-
-			let readStream = fs.createReadStream(filePath);
-
-			readStream.on('open',  () => {
-
-				readStream.pipe(res);
-				resolve()
-
-			});
-
-			readStream.on('error', (err) => {
-
-				app.logger.error(err);
-				next(new restError.InternalServerError( err.message ));
-				reject(err)
-			});
-
-		} );
-
-	};
 	const checkFile = (req, res, next) => {
 
 		return stat(filePath)
@@ -88,16 +44,16 @@ const indexController = (app) => {
 				app.logger.info(data);
 
 				if (data && data.size === 0) return next();
-				else return sendFile(res, next); //      <-------
-				                                 // 		|        |
-			}, () => {                         //     |        |
-						                             //     |        |
-				return next();                   //     |        ^ "если фаил не пустой зачитывает его содержимое и отвечает содержимым на POST запрос,
-		                                     //     |        | а то что пришло в POST запросе записывает в фаил."
-			} )                                //     |        | это мне показалось странным
-			.then(() => {                      //     |        |
-																				 //     |        |
-				return writeToFile(req.body);    //      ------->
+				else return sendFile(filePath, res, next); //      <-------
+				                                           // 		|        |
+			}, () => {                                   //     |        |
+						                                       //     |        |
+				return next();                             //     |        ^ "если фаил не пустой зачитывает его содержимое и отвечает содержимым на POST запрос,
+		                                               //     |        | а то что пришло в POST запросе записывает в фаил."
+			} )                                          //     |        | это мне показалось странным
+			.then(() => {                                //     |        |
+																				           //     |        |
+				return writeToFile(filePath, req.body);    //      ------->
 
 			}, (err) => {
 

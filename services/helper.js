@@ -1,90 +1,52 @@
-const 	_ = require('lodash'),
-	moment = require('moment'),
-	Promise = require('bluebird');
+const Promise = require('bluebird'),
+	fs = require('fs');
 
-const lastNameParser = (lastName, range) => {
+const writeToFile = (filePath, body) => {
 
-	if (lastName.length < 5){
+	return new Promise( (resolve, reject) => {
 
-		const randInt = Math.floor((Math.random() * range));
-		lastName += randInt;
+		let writeStream = fs.createWriteStream(filePath);
 
-		return lastNameParser(lastName, range*100)
+		writeStream.write(body);
+		writeStream.end();
 
-	} else if (5 <= lastName.length &&  lastName.length <= 8) {
+		writeStream.on('close', () => {
+			resolve()
+		});
 
-		return lastName
+		writeStream.on('error', (err) => {
+			reject()
+		});
 
-	} else if (lastName.length > 8) {
-
-		return lastName.slice(0, 8)
-
-	}
-
-};
-
-const lastNameParserNoReq = (lastName) => {
-
-	let range = 100;
-
-	if (lastName.length < 5){
-
-		const pow = 5 - lastName.length,
-		randInt = Math.floor((Math.random() * Math.pow(range, pow)));
-		lastName += randInt;
-
-		return lastName
-
-	} else if (5 <= lastName.length &&  lastName.length <= 8) {
-
-		return lastName
-
-	} else if (lastName.length > 8) {
-
-		return lastName.slice(0, 8)
-
-	}
+	} );
 
 };
 
-const uniqueCheck = (generatedName) => {
-	return new Promise(( resolve, reject ) => {
+const sendFile = (filePath, res, next) => {
 
-		 resolve(generatedName);
+	return new Promise( (resolve, reject) => {
 
-	});
-};
+		let readStream = fs.createReadStream(filePath);
 
-const rangeAlphaGenerator = (start,stop) => {
-	let result=[];
+		readStream.on('open',  () => {
 
-	for (let idx=start.charCodeAt(0),end=stop.charCodeAt(0); idx <=end; ++idx){
-		result.push(String.fromCharCode(idx));
-	}
+			readStream.pipe(res);
+			resolve()
 
-	return result;
-};
+		});
 
-const userNameGenerator = (generatorObj) => {
+		readStream.on('error', (err) => {
 
-	const alphabet = rangeAlphaGenerator('a','z'),
-		firstName = generatorObj.firstName || _.sample(alphabet),
-		lastName = generatorObj.lastName || _.sample(alphabet),
-		dob = generatorObj.dob,
-		email = generatorObj.email,
-		dobGen = Number(moment(new Date(dob || Date.now())).format('DD'));
+			app.logger.error(err);
+			next(new restError.InternalServerError( err.message ));
+			reject(err)
+		});
 
-	let genStr = `${firstName.charAt(0).toLowerCase()}${lastNameParserNoReq(lastName).toLowerCase()}${dobGen}`;
-
-	if (email) return Promise.resolve(email);
-	else return uniqueCheck(genStr);//return promise
-
-};
-
-const passwordGenerator = (genStr) => {
+	} );
 
 };
 
 module.exports = {
-	userNameGenerator
+	writeToFile,
+	sendFile
 };
