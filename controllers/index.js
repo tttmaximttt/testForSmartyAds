@@ -59,20 +59,25 @@ const indexController = (app) => {
 
 	const sendFile = (res, next) => {
 
-		let readStream = fs.createReadStream(filePath);
+		return new Promise( (resolve, reject) => {
 
-		readStream.on('open',  () => {
+			let readStream = fs.createReadStream(filePath);
 
-			readStream.pipe(res);
+			readStream.on('open',  () => {
 
-		});
+				readStream.pipe(res);
+				resolve()
 
-		readStream.on('error', (err) => {
+			});
 
-			app.logger.error(err);
-			next(new restError.InternalServerError( err.message ));
+			readStream.on('error', (err) => {
 
-		});
+				app.logger.error(err);
+				next(new restError.InternalServerError( err.message ));
+				reject(err)
+			});
+
+		} );
 
 	};
 	const checkFile = (req, res, next) => {
@@ -83,16 +88,16 @@ const indexController = (app) => {
 				app.logger.info(data);
 
 				if (data && data.size === 0) return next();
-				else return writeToFile(req.body);
-
-			}, () => {
-
-				return next();
-
-			} )
-			.then(() => {
-
-				return sendFile(res, next);
+				else return sendFile(res, next); //      <-------
+				                                 // 		|        |
+			}, () => {                         //     |        |
+						                             //     |        |
+				return next();                   //     |        ^ "если фаил не пустой зачитывает его содержимое и отвечает содержимым на POST запрос,
+		                                     //     |        | а то что пришло в POST запросе записывает в фаил."
+			} )                                //     |        | это мне показалось странным
+			.then(() => {                      //     |        |
+																				 //     |        |
+				return writeToFile(req.body);    //      ------->
 
 			}, (err) => {
 
