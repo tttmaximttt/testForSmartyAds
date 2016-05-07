@@ -1,0 +1,31 @@
+{
+  server: {
+    port: 4000,
+    cluster: false
+  },
+  logging: {
+    dir: "logs",
+    level: "debug"
+  },
+  cors: {
+    origins: ["*"],
+    credentials: true,
+    headers: []
+  },
+  app: {
+     name: "Supernaut",
+     csv_table: "importTest",
+     "authProfiles": {
+        "google": {"web":{"client_id":"1010894730945-sksila8ai7tq19o5hmce8u5cmkg6tiab.apps.googleusercontent.com","project_id":"tcg-api-1294","auth_uri":"https://accounts.google.com/o/oauth2/auth","token_uri":"https://accounts.google.com/o/oauth2/token","auth_provider_x509_cert_url":"https://www.googleapis.com/oauth2/v1/certs","client_secret":"QPV3i6dHX4K95Txmr3V-nTJR","redirect_uris":["http://localhost:8000/auth/google/callback","http://localhost:4000/auth/google/callback"],"javascript_origins":["http://localhost:8000","http://localhost:4000"]}}
+     },
+     session: {
+      secret:"GrsfR-455Fdf_34435-345egfdgsDF-fdghd"
+     }
+  },
+  request:{
+      headers: {
+          'x-api-key': 'fscetlWDeJaBhnfICMu7V6DwRgBn8NQY38k9RWAM'
+       },
+       baseUrl: 'https://cb4iroj9ya.execute-api.us-west-2.amazonaws.com/test'
+    }
+}
