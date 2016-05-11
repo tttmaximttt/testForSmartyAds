@@ -1,72 +1,89 @@
 'use strict';
 
-const Promise = require('bluebird'),
-	fs = require('fs'),
-	path = require('path'),
-	{writeToFile,sendFile} = require('../services/helper'),
-	stat = Promise.promisify(fs.stat);
+const fs = require('fs'),
+	path = require('path');
 
+import {read, write} from '../sevices/helpers';
 
-const indexController = (app) => {
+const indexController = () => {
 
-	let filePath = path.format({
+	const filePath = path.format({
 		dir: appDir + '/uploads',
 		base: 'hello.txt'
 	});
 
-	const fileHandling = (req, res, next) => {
-		let dir = path.dirname(filePath);
+	const fileHandling = (req, res) => {
+		let item  = ' ';
 
-		return stat(dir)
-			.then( () => {
+		req.on('data', (chunk) => {
+			item += chunk
+		});
 
-				return writeToFile(filePath, req.body)
+		fs.stat(filePath, (err, data) => {
 
-			}, () => {
+			if (err) {
 
-				fs.mkdirSync(dir);
-				return writeToFile(filePath, req.body)
+				if ("ENOENT" === err.code) {
+					fs.mkdir(path.dirname(filePath), (err) => {
 
-			} )
-			.then( () =>{
-				return sendFile(filePath, res, next)
-			}, (err) => {
-				app.logger.error(err);
-				return next(new restError.InternalServerError( err.message ));
-			} )
-	};
+						if (err) {
 
-	const checkFile = (req, res, next) => {
+							res.statusCode = 500;
+							res.end(err.message);
 
-		return stat(filePath)
-			.then( (data) => {
+						} else {
 
-				app.logger.info(data);
+							const stream = write(filePath, item, res);
 
-				if (data && data.size === 0) return next();
-				else return sendFile(filePath, res, next); //      <-------
-				                                           // 		|        |
-			}, () => {                                   //     |        |
-						                                       //     |        |
-				return next();                             //     |        ^ "если фаил не пустой зачитывает его содержимое и отвечает содержимым на POST запрос,
-		                                               //     |        | а то что пришло в POST запросе записывает в фаил."
-			} )                                          //     |        | это мне показалось странным
-			.then(() => {                                //     |        |
-																				           //     |        |
-				return writeToFile(filePath, req.body);    //      ------->
+							stream.on('close', () => {
+								read(filePath, res);
+							});
 
-			}, (err) => {
+						}
 
-				app.logger.error(err);
-				return next(new restError.InternalServerError( err.message ));
+					});
 
-			});
+				} else {
+
+					res.statusCode = 500;
+					res.end(err.message);
+
+				}
+
+			} else {
+
+				if (data && data.size === 0) {
+					const stream = write(filePath, item, res);
+
+					stream.on('close', () => {
+						read(filePath, res);
+					});
+
+				} else {
+
+					var stream = read(filePath, res);
+
+					stream.on('close', () => {
+						const stream = write(filePath, item, res);
+
+						stream.on('close', () => {
+							console.log('Item write after read')
+						});
+
+					});
+
+				};
+
+			}
+
+		});
+
+		req.on('end', () => {});
 
 	};
 
 	return {
-		fileHandling,
-		checkFile
+		fileHandling
 	}
 };
 
